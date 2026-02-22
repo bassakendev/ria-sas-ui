@@ -1,285 +1,302 @@
-# RIA SaaS - Frontend
+# RIA SaaS - Plateforme de Gestion de Facturation
 
-Professional invoice & client management SaaS UI built with Next.js.
+## 📋 Description
 
-## 🚀 Getting Started
+RIA SaaS est une plateforme web moderne de gestion de facturation et de clients conçue pour les petites et moyennes entreprises. L'application permet de créer, gérer et suivre facilement vos factures, clients et revenus.
 
-### Prerequisites
-- Node.js 18+
-- npm or yarn
+## ✨ Fonctionnalités Principales
 
-### Installation
+### 📊 Dashboard
+- Vue d'ensemble des statistiques clés (revenus, factures, clients)
+- Graphiques de revenus mensuels
+- Liste des factures récentes
+- Export CSV des données
 
-```bash
-npm install
-# or
-yarn install
+### 📄 Gestion des Factures
+- Création et édition de factures
+- Prévisualisation en temps réel
+- Gestion des items/services
+- TVA optionnelle et configurable
+- Filigrane personnalisable (texte, couleur, rotation)
+- Statuts : Brouillon, Envoyée, Payée, Impayée
+- Envoi par email et WhatsApp
+- Export CSV avec filtres
+- Téléchargement PDF
+
+### 👥 Gestion des Clients
+- CRUD complet des clients
+- Historique des factures par client
+- Statistiques de revenus par client
+- Export CSV avec filtres
+- Recherche et filtrage avancé
+
+### 💳 Abonnements & Tarification
+- **Plan Gratuit** : 5 factures/mois, 3 clients max, 100 MB
+- **Plan Pro** : Factures illimitées, clients illimités, 10 GB, support prioritaire
+- Intégration Stripe pour les paiements
+- Portail de gestion d'abonnement
+- Badge de statut Pro/Free dans l'interface
+
+### ⚙️ Paramètres
+- Gestion du profil (email, nom entreprise, mot de passe)
+- Paramètres de facturation
+- Suppression de compte
+- Thème clair/sombre
+
+### 💬 Support & Feedback
+- Bouton flottant de contact accessible partout
+- Formulaire de feedback (questions, bugs, suggestions)
+- Système de notifications Toast
+
+## 🏗️ Structure du Projet
+
+```
+ria-sas-ui/
+├── app/                          # Pages Next.js (App Router)
+│   ├── (public)/                # Pages publiques (non authentifiées)
+│   │   ├── login/              # Page de connexion
+│   │   ├── register/           # Page d'inscription
+│   │   └── pricing/            # Page de tarification
+│   ├── (dashboard)/            # Pages du dashboard (authentifiées)
+│   │   ├── dashboard/         # Page d'accueil dashboard
+│   │   ├── invoices/          # Gestion des factures
+│   │   │   ├── create/       # Créer une facture
+│   │   │   ├── [id]/         # Détails d'une facture
+│   │   │   └── [id]/edit/    # Modifier une facture
+│   │   ├── clients/           # Gestion des clients
+│   │   │   ├── create/       # Créer un client
+│   │   │   ├── [id]/         # Détails d'un client
+│   │   │   └── [id]/edit/    # Modifier un client
+│   │   └── settings/          # Paramètres
+│   │       ├── page.tsx       # Profil utilisateur
+│   │       └── billing/       # Facturation & abonnement
+│   ├── billing/               # Pages de callback Stripe
+│   │   ├── success/          # Paiement réussi
+│   │   └── cancel/           # Paiement annulé
+│   ├── layout.tsx            # Layout racine
+│   └── page.tsx              # Page d'accueil
+│
+├── components/                 # Composants React réutilisables
+│   ├── ui/                    # Composants UI de base
+│   │   ├── Sidebar.tsx       # Menu latéral
+│   │   ├── Topbar.tsx        # Barre supérieure
+│   │   ├── Button.tsx        # Boutons
+│   │   ├── Input.tsx         # Champs de saisie
+│   │   ├── Toast.tsx         # Notifications
+│   │   ├── ConfirmModal.tsx  # Modales de confirmation
+│   │   ├── FeedbackButton.tsx # Bouton de feedback flottant
+│   │   └── ...               # Autres composants UI
+│   ├── forms/                 # Formulaires
+│   │   ├── InvoiceFormBuilder.tsx  # Formulaire de facture
+│   │   ├── ClientFormBuilder.tsx   # Formulaire de client
+│   │   ├── LoginForm.tsx          # Formulaire de connexion
+│   │   └── RegisterForm.tsx       # Formulaire d'inscription
+│   ├── tables/                # Tableaux de données
+│   │   ├── InvoicesTable.tsx # Tableau des factures
+│   │   └── ClientsTable.tsx  # Tableau des clients
+│   └── auth/                  # Composants d'authentification
+│
+├── lib/                        # Bibliothèques et utilitaires
+│   ├── api.ts                 # Configuration Axios
+│   ├── auth.ts                # Fonctions d'authentification
+│   ├── stripe.ts              # Intégration Stripe
+│   ├── csvExport.ts           # Export CSV
+│   ├── hooks.ts               # Hooks personnalisés
+│   ├── theme.tsx              # Gestion du thème
+│   └── sidebar-context.tsx    # Contexte sidebar
+│
+├── consts/                     # Constantes et données mock
+│   ├── invoices.ts            # Mock data factures
+│   ├── clients.ts             # Mock data clients
+│   ├── dashboard.ts           # Mock data dashboard
+│   ├── subscriptions.ts       # Configuration des plans
+│   └── services.ts            # Mock data services
+│
+├── public/                     # Ressources statiques
+├── .env.local                 # Variables d'environnement (à créer)
+├── package.json               # Dépendances
+└── tsconfig.json              # Configuration TypeScript
 ```
 
-### Configuration
+## 🚀 Installation
 
-Create `.env.local` file in the root directory:
+### Prérequis
+- Node.js 18.x ou supérieur
+- npm ou yarn
+- Un backend API (voir API_DOCUMENTATION.md)
 
-```env
-NEXT_PUBLIC_API_URL=http://localhost:3001/api
-```
+### Étapes d'installation
 
-### Development
+1. **Cloner le projet**
+   ```bash
+   git clone <repository-url>
+   cd ria-sas-ui
+   ```
 
-```bash
-npm run dev
-# or
-yarn dev
-```
+2. **Installer les dépendances**
+   ```bash
+   npm install
+   # ou
+   yarn install
+   ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+3. **Configuration des variables d'environnement**
+   
+   Créer un fichier `.env.local` à la racine du projet :
+   ```env
+   NEXT_PUBLIC_API_URL=http://localhost:3001/api
+   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
+   ```
 
-### Production Build
+4. **Lancer le serveur de développement**
+   ```bash
+   npm run dev
+   # ou
+   yarn dev
+   ```
 
-```bash
-npm run build
-npm start
-```
+5. **Accéder à l'application**
+   
+   Ouvrir [http://localhost:3000](http://localhost:3000) dans votre navigateur
 
-## 📁 Project Structure
+## 🛠️ Technologies Utilisées
 
-```
-app/
-├── (public)/                 # Public pages
-│   ├── layout.tsx
-│   ├── page.tsx             # Landing page
-│   ├── login/page.tsx       # Login
-│   ├── register/page.tsx    # Registration
-│   └── pricing/page.tsx     # Pricing
-├── (dashboard)/             # Protected pages (auth required)
-│   ├── layout.tsx           # Dashboard layout with sidebar
-│   ├── dashboard/page.tsx   # Dashboard stats
-│   ├── clients/page.tsx     # Clients management
-│   ├── services/page.tsx    # Services management
-│   └── invoices/
-│       ├── page.tsx         # Invoices list
-│       ├── new/page.tsx     # Create invoice
-│       └── [id]/page.tsx    # Invoice detail
-├── layout.tsx              # Root layout
-├── globals.css             # Global styles
-└── page.tsx                # Landing page routes
+### Frontend
+- **Next.js 15** - Framework React avec App Router
+- **React 19** - Bibliothèque UI
+- **TypeScript** - Typage statique
+- **Tailwind CSS** - Framework CSS utility-first
+- **Lucide React** - Icônes
 
-components/
-├── ui/                      # Reusable UI components
-│   ├── Button.tsx
-│   ├── Input.tsx
-│   ├── Select.tsx
-│   ├── Card.tsx
-│   ├── Badge.tsx
-│   ├── Alert.tsx
-│   ├── Loader.tsx
-│   ├── ConfirmDialog.tsx
-│   ├── Sidebar.tsx
-│   └── Topbar.tsx
-├── forms/                   # Form components
-│   ├── LoginForm.tsx
-│   ├── RegisterForm.tsx
-│   ├── ClientForm.tsx
-│   ├── ServiceForm.tsx
-│   └── InvoiceForm.tsx
-└── tables/                  # Table components
-    ├── ClientsTable.tsx
-    ├── ServicesTable.tsx
-    └── InvoicesTable.tsx
+### Bibliothèques
+- **Axios** - Client HTTP
+- **Stripe** - Paiements en ligne
+- **React Hook Form** - Gestion de formulaires (optionnel)
 
-lib/
-├── api.ts                   # Axios client with interceptors
-├── auth.ts                  # Authentication utilities
-├── types.ts                 # TypeScript types
-└── hooks.ts                 # Custom React hooks
-```
+### Outils de développement
+- **ESLint** - Linter JavaScript/TypeScript
+- **PostCSS** - Traitement CSS
 
-## 🔐 Authentication Flow
+## 📱 Fonctionnalités Clés par Page
 
-1. User fills login/register form
-2. Request sent to backend API
-3. Backend returns JWT token
-4. Token stored in localStorage
-5. Axios interceptor adds token to all requests
-6. 401 responses trigger logout & redirect to /login
+### 🏠 Dashboard (`/dashboard`)
+- Statistiques KPI (revenus, impayés, clients, factures)
+- Graphiques de revenus mensuels
+- Liste des 5 dernières factures
+- Export CSV rapide
 
-## 📦 Pages & Features
+### 📄 Factures (`/invoices`)
+- Table avec recherche et filtres (statut, date)
+- Actions inline : Voir, Modifier, Supprimer
+- Export CSV filtré
+- Création de facture avec :
+  - Sélection client
+  - Ajout d'items/services multiples
+  - Calcul automatique des totaux
+  - TVA optionnelle et configurable
+  - Filigrane personnalisable
+  - Prévisualisation en temps réel
+  - Notes personnalisées
 
-### Public Pages
-- **`/`** - Landing page with features overview
-- **`/login`** - Login form
-- **`/register`** - Registration form
-- **`/pricing`** - Pricing page
+### 👥 Clients (`/clients`)
+- Table avec recherche
+- Statistiques par client (factures, revenus)
+- Export CSV
+- Formulaire de création/édition complet
 
-### Protected Pages (Dashboard)
-- **`/dashboard`** - Stats dashboard (Total Revenue, Unpaid, Clients, Invoices)
-- **`/clients`** - Clients list with add/edit/delete
-- **`/services`** - Services list with add/edit/delete
-- **`/invoices`** - Invoices list
-- **`/invoices/new`** - Create new invoice with dynamic items
-- **`/invoices/[id]`** - Invoice detail, edit, mark paid, download PDF
+### ⚙️ Paramètres (`/settings`)
+- **Profil** : Modification email, entreprise, mot de passe
+- **Facturation** : 
+  - Affichage du plan actuel (Free/Pro)
+  - Upgrade vers Pro
+  - Gestion de l'abonnement Stripe
+  - Annulation d'abonnement
+- **Compte** : Suppression de compte avec confirmation
 
-## 🛠 Tech Stack
+## 🎨 Design & UX
 
-- **Next.js 16** - React framework with App Router
-- **TypeScript** - Type safety
-- **TailwindCSS** - Styling
-- **Axios** - HTTP client
-- **React Hook Form** - Form state management
-- **Zod** - Schema validation
-- **@hookform/resolvers** - Integration between React Hook Form and Zod
+### Thème
+- Mode clair et sombre
+- Transition fluide entre les thèmes
+- Persistance de la préférence utilisateur
 
-## 📋 Features
+### Navigation
+- Sidebar collapsible avec badge de plan
+- Topbar avec CTA "Passer au Pro" (visible en Free)
+- Responsive mobile-friendly
 
-✅ **Authentication**
-- Login/Register
-- Token-based auth
-- Automatic logout on 401
+### Interactions
+- Notifications Toast pour tous les feedbacks
+- Modales de confirmation pour actions destructives
+- Animations et transitions fluides
+- États de chargement clairs
 
-✅ **Clients Management**
-- List all clients
-- Add new client
-- Edit client
-- Delete client
+### Accessibilité
+- Navigation au clavier
+- Aria labels sur les éléments interactifs
+- Contraste des couleurs respectant WCAG
 
-✅ **Services Management**
-- List all services
-- Add new service
-- Edit service
-- Delete service
+## 🔐 Sécurité
 
-✅ **Invoices Management**
-- List all invoices
-- Create invoice with dynamic items
-- Edit invoice
-- View invoice details
-- Mark invoice as paid
-- Download PDF
-- Invoice status tracking (draft, sent, paid, overdue)
+- Authentification JWT via localStorage
+- Routes protégées avec middleware
+- Validation des données côté client
+- Gestion sécurisée des tokens
+- Protection CSRF (à configurer côté backend)
 
-✅ **Dashboard**
-- Total revenue
-- Unpaid amount
-- Total clients count
-- Total invoices count
+## 📦 Build & Déploiement
 
-✅ **UI/UX**
-- Responsive design
-- Loading states
-- Error handling
-- Confirmation dialogs
-- Input validation
-- Form error messages
-
-## 🎨 Design System
-
-### Colors
-- **Primary**: Blue (#2563EB)
-- **Success**: Green (#10B981)
-- **Warning**: Yellow (#F59E0B)
-- **Danger**: Red (#EF4444)
-- **Gray**: Gray scale (#1F2937 to #F9FAFB)
-
-### Components
-- Button (primary, secondary, danger)
-- Input fields with validation
-- Select dropdowns
-- Cards and sections
-- Badges for status
-- Alerts for messages
-- Loader spinners
-- Confirm dialogs
-- Sidebar navigation
-- Topbar header
-
-## 📝 API Contract
-
-### Login
-```
-POST /auth/login
-{
-  "email": "user@example.com",
-  "password": "password"
-}
-→ { "token": "jwt_token", "user": {...} }
-```
-
-### Get Clients
-```
-GET /clients
-→ [{ "id", "name", "email", "phone", "address", "created_at" }]
-```
-
-### Get Invoice
-```
-GET /invoices/:id
-→ { 
-  "id", "invoice_number", "client_id", "items", 
-  "total", "status", "due_date", "created_at"
-}
-```
-
-### Mark Invoice Paid
-```
-PATCH /invoices/:id/mark-paid
-```
-
-### Download Invoice PDF
-```
-GET /invoices/:id/download-pdf
-```
-
-## 🔒 Security
-
-- Tokens stored in localStorage
-- CORS configured on backend
-- Automatic token injection in Axios requests
-- 401 handling with automatic logout
-- Form validation on client-side
-- No sensitive data in frontend
-
-## 🐛 Troubleshooting
-
-### 401 Unauthorized errors
-- Clear localStorage and login again
-- Check if API URL is correct in `.env.local`
-- Verify backend is running
-
-### Form validation errors
-- Check that all required fields are filled
-- Ensure email format is valid
-- Ensure numbers are properly formatted
-
-### Page not loading
-- Check browser console for errors
-- Verify API endpoint is responding
-- Check network tab in DevTools
-
-## 🚀 Deployment
-
-### Build
+### Build de production
 ```bash
 npm run build
+# ou
+yarn build
 ```
 
-### Start
+### Lancer en production
 ```bash
 npm start
+# ou
+yarn start
 ```
 
-### Environment
-Set `NEXT_PUBLIC_API_URL` to your production API URL
+### Déploiement recommandé
+- **Vercel** (recommandé pour Next.js)
+- **Netlify**
+- **AWS Amplify**
+- **Docker** (voir Dockerfile si disponible)
 
-## 📚 Additional Notes
+### Variables d'environnement en production
+Configurer les variables suivantes dans votre plateforme de déploiement :
+- `NEXT_PUBLIC_API_URL` - URL de votre API backend
+- `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` - Clé publique Stripe
 
-- All calculations on invoices are frontend-only (visual)
-- Backend is authoritative for data
-- Forms include proper error handling
-- Responsive design works on mobile, tablet, desktop
-- No dark mode in V1
+## 🧪 Tests (À implémenter)
 
-## Deploy on Vercel
+Le projet peut être étendu avec :
+- **Jest** + **React Testing Library** pour les tests unitaires
+- **Cypress** ou **Playwright** pour les tests E2E
+- **MSW** pour mocker les API en développement
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 📚 Documentation Complémentaire
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **[API_DOCUMENTATION.md](./API_DOCUMENTATION.md)** - Documentation complète des endpoints API
+
+## 🤝 Contribution
+
+Le projet utilise :
+- ESLint pour la qualité du code
+- Prettier pour le formatage (à configurer)
+- Commits conventionnels recommandés
+
+## 📄 License
+
+[À définir]
+
+## 👥 Auteurs
+
+RIA SaaS Team
+
+---
+
+**Note** : Ce projet est actuellement en développement et utilise des données mockées. Pour le rendre fonctionnel en production, implémentez le backend selon [API_DOCUMENTATION.md](./API_DOCUMENTATION.md).
