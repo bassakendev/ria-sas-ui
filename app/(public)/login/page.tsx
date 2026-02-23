@@ -113,10 +113,18 @@ export default function LoginPage() {
             </div>
 
             {/* Footer Links */}
-            <div className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
-              <Link href="/" className="hover:text-gray-700 dark:hover:text-gray-300">
-                ← Retour à l&apos;accueil
-              </Link>
+            <div className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400 space-y-2">
+              <div>
+                <Link href="/" className="hover:text-gray-700 dark:hover:text-gray-300">
+                  ← Retour à l&apos;accueil
+                </Link>
+              </div>
+              <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+                <p className="text-xs mb-1">Vous êtes un administrateur ?</p>
+                <Link href="/admin-login" className="text-red-600 dark:text-red-400 hover:underline font-semibold">
+                  Accès portail admin
+                </Link>
+              </div>
             </div>
           </div>
         </div>

@@ -1,18 +1,56 @@
 'use client';
 
 import { Button } from '@/components/ui/Button';
-import { mockClients } from '@/consts/clients';
-import { mockInvoices } from '@/consts/invoices';
-import { ArrowLeft, DollarSign, FileText, Mail, MapPin, Phone } from 'lucide-react';
+import { Toast, useToast } from '@/components/ui/Toast';
+import type { Client } from '@/consts/clients';
+import type { Invoice } from '@/consts/invoices';
+import { getClient } from '@/lib/clients';
+import { getInvoices } from '@/lib/invoices';
+import { ArrowLeft, DollarSign, FileText, Loader2, Mail, MapPin, Phone } from 'lucide-react';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { use } from 'react';
 
 export default function ClientProfilePage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
+    const { toasts, addToast, removeToast } = useToast();
+    const [client, setClient] = useState<Client | null>(null);
+    const [invoices, setInvoices] = useState<Invoice[]>([]);
+    const [loading, setLoading] = useState(true);
 
-    // Find client in mock data
-    const client = mockClients.find(c => c.id === id);
-    const clientInvoices = mockInvoices.filter(i => i.client_id === id);
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                setLoading(true);
+                const clientData = await getClient(id);
+                setClient(clientData);
+
+                const invoicesData = await getInvoices({ limit: 100 });
+                setInvoices(invoicesData.invoices.filter(i => i.client_id === id));
+            } catch (err) {
+                console.error('Erreur:', err);
+                addToast(
+                    err instanceof Error ? err.message : 'Impossible de charger les données du client',
+                    'error'
+                );
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+    }, [id]);
+
+    const paidInvoices = invoices.filter(i => i.status === 'paid');
+    const unpaidInvoices = invoices.filter(i => i.status === 'unpaid' || i.status === 'sent');
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center h-96">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            </div>
+        );
+    }
 
     if (!client) {
         return (
@@ -28,12 +66,6 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
             </div>
         );
     }
-
-    const paidInvoices = clientInvoices.filter(i => i.status === 'paid');
-    const unpaidInvoices = clientInvoices.filter(i => i.status === 'unpaid' || i.status === 'sent');
-
-    return (
-        <div>
             {/* Header */}
             <div className="mb-8">
                 <Link href="/clients" className="inline-flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 mb-4">
@@ -239,5 +271,17 @@ export default function ClientProfilePage({ params }: { params: Promise<{ id: st
                 )}
             </div>
         </div>
+
+    {
+        toasts.map((toast) => (
+            <Toast
+                key={toast.id}
+                message={toast.message}
+                type={toast.type}
+                onClose={() => removeToast(toast.id)}
+            />
+        ))
+    }
+    </div >
     );
 }

@@ -2,16 +2,20 @@
 
 import { Button } from '@/components/ui/Button';
 import { Header } from '@/components/ui/Header';
+import { Toast, useToast } from '@/components/ui/Toast';
+import { usePublicPlans } from '@/lib/hooks/usePublicPlans';
 import {
   BarChart3,
   Check,
   Clock,
   FileText,
+  Loader2,
   Users,
   Zap
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useEffect } from 'react';
 
 function DashboardIllustration() {
   return (
@@ -62,7 +66,19 @@ function ProductIllustration() {
 }
 
 export default function HomePage() {
+  const { toasts, addToast, removeToast } = useToast();
+  const { plans, loading: plansLoading, fetch } = usePublicPlans();
 
+  useEffect(() => {
+    fetch().catch(err => {
+      console.error('Erreur:', err);
+      addToast(
+        err instanceof Error ? err.message : 'Impossible de charger les plans',
+        'error'
+      );
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100">
@@ -188,28 +204,51 @@ export default function HomePage() {
 
       <section className="bg-white dark:bg-gray-950 py-16" id="pricing">
         <div className="mx-auto max-w-300 px-5 sm:px-6">
-          <h2 className="text-center text-3xl font-bold">Pricing</h2>
+          <h2 className="text-center text-3xl font-bold">Tarification</h2>
           <div className="mt-10 flex justify-center">
-            <div className="w-full max-w-md rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-8 shadow-sm">
-              <div className="mb-3 inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-700 px-3 py-1 text-xs font-bold text-gray-700 dark:text-gray-300">
-                Populaire
+            {plansLoading ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
               </div>
-              <h3 className="text-2xl font-bold">Plan Pro</h3>
-              <p className="mt-2 text-4xl font-bold">12€/mois</p>
-              <ul className="mt-6 space-y-3 text-sm text-gray-700 dark:text-gray-300">
-                <li>✓ Clients illimites</li>
-                <li>✓ Factures illimitees</li>
-                <li>✓ Export CSV</li>
-                <li>✓ PDF professionnel</li>
-                <li>✓ Tableau de bord clair</li>
-                <li>✓ Support email</li>
-              </ul>
-              <Link href="/register" className="mt-6 block">
-                <Button variant="primary" className="w-full bg-blue-600 py-3 hover:bg-blue-700">
-                  Commencer maintenant
-                </Button>
-              </Link>
-            </div>
+            ) : plans.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl">
+                {plans.map((plan) => (
+                  <div
+                    key={plan.name}
+                    className={`rounded-xl border p-8 shadow-sm flex flex-col ${plan.name === 'pro'
+                      ? 'border-blue-500 dark:border-blue-600 bg-linear-to-br from-blue-50 to-white dark:from-blue-900/20 dark:to-gray-900 ring-2 ring-blue-500/50'
+                      : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'
+                      }`}
+                  >
+                    {plan.name === 'pro' && (
+                      <div className="mb-3 inline-flex items-center rounded-full bg-blue-100 dark:bg-blue-900 px-3 py-1 text-xs font-bold text-blue-700 dark:text-blue-300 w-fit">
+                        Populaire
+                      </div>
+                    )}
+                    <h3 className="text-2xl font-bold capitalize">{plan.name}</h3>
+                    <p className="mt-2 text-4xl font-bold">{plan.price === 0 ? 'Gratuit' : `${plan.price}€/mois`}</p>
+                    <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{plan.description ?? 'RAS'}</p>
+                    <ul className="mt-6 space-y-3 text-sm text-gray-700 dark:text-gray-300 grow">
+                      {plan.features.map((feature) => (
+                        <li key={feature} className="flex items-start gap-2">
+                          <Check className="h-4 w-4 text-green-600 dark:text-green-400 shrink-0 mt-0.5" />
+                          <span>{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <Link href="/register" className="mt-6 block">
+                      <Button variant="primary" className="w-full py-3">
+                        {plan.price === 0 ? 'Commencer gratuitement' : 'Commencer maintenant'}
+                      </Button>
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="w-full max-w-md rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-8 text-center">
+                <p className="text-gray-600 dark:text-gray-400">Impossible de charger les plans</p>
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -260,6 +299,14 @@ export default function HomePage() {
           </div>
         </div>
       </footer>
+
+      {toasts.map((toast) => (
+        <Toast
+          key={toast.id}
+          toast={toast}
+          onClose={() => removeToast(toast.id)}
+        />
+      ))}
     </div>
   );
 }

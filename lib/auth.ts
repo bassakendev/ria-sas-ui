@@ -24,6 +24,7 @@ export interface UserData {
     plan: 'free' | 'pro';
     email: string;
     company_name: string;
+    role?: 'user' | 'admin' | 'superadmin';
     subscription_status?: 'active' | 'cancelled' | 'past_due';
     next_billing_date?: string;
 }
@@ -62,10 +63,16 @@ export function isAuthenticated(): boolean {
 }
 
 export async function fetchUserData(): Promise<UserData> {
+    const token = getToken();
+    if (!token) {
+        throw new Error('Non authentifié');
+    }
+
     const response = await fetch('/api/user', {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
         },
     });
 

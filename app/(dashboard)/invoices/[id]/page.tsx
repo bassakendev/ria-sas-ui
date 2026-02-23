@@ -1,13 +1,46 @@
 'use client';
 
-import { getStatusColor, getStatusLabel, mockInvoices } from '@/consts/invoices';
-import { ArrowLeft, Download, Edit3, Mail, MapPin, MessageCircle, Trash2 } from 'lucide-react';
+import { useToast } from '@/components/ui/Toast';
+import type { Invoice } from '@/consts/invoices';
+import { getStatusColor, getStatusLabel } from '@/consts/invoices';
+import { getInvoice } from '@/lib/invoices';
+import { ArrowLeft, Download, Edit3, Loader2, Mail, MapPin, MessageCircle, Trash2 } from 'lucide-react';
 import Link from 'next/link';
-import { use } from 'react';
+import { use, useEffect, useState } from 'react';
 
 export default function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const invoice = mockInvoices.find((inv) => inv.id === id);
+  const { toasts, addToast, removeToast } = useToast();
+  const [invoice, setInvoice] = useState<Invoice | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchInvoice = async () => {
+      try {
+        setLoading(true);
+        const invoiceData = await getInvoice(id);
+        setInvoice(invoiceData);
+      } catch (err) {
+        console.error('Erreur:', err);
+        addToast(
+          err instanceof Error ? err.message : 'Impossible de charger la facture',
+          'error'
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchInvoice();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
 
   if (!invoice) {
     return (
@@ -294,6 +327,15 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
             </div>
           </div>
         </div>
+
+        {toasts.map((toast) => (
+          <Toast
+            key={toast.id}
+            message={toast.message}
+            type={toast.type}
+            onClose={() => removeToast(toast.id)}
+          />
+        ))}
       </div>
     </div>
   );

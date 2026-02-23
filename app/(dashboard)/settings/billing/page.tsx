@@ -1,39 +1,80 @@
 'use client';
 
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
-import { ToastContainer, useToast } from '@/components/ui/Toast';
-import { isPro, mockUserSubscription, subscriptionPlans, UserSubscription } from '@/consts/subscriptions';
-import { ArrowRight, Check, CreditCard, Zap } from 'lucide-react';
+import { useToast } from '@/components/ui/Toast';
+import { isPro, subscriptionPlans, type UserSubscription } from '@/consts/subscriptions';
+import { cancelSubscription, getCurrentSubscription } from '@/lib/subscriptions';
+import { ArrowRight, Check, CreditCard, Loader2, Zap } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function BillingSettingsPage() {
     const router = useRouter();
-    const [subscription] = useState<UserSubscription>(mockUserSubscription);
+    const { toasts, addToast, removeToast } = useToast();
+    const [subscription, setSubscription] = useState<UserSubscription | null>(null);
+    const [loading, setLoading] = useState(true);
     const [showCancelModal, setShowCancelModal] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
-    const { toasts, addToast, removeToast } = useToast();
 
-    const isProUser = isPro(subscription);
-    const currentPlan = subscriptionPlans[subscription.plan];
-    const proPlan = subscriptionPlans.pro;
+    useEffect(() => {
+        const fetchSubscription = async () => {
+            try {
+                setLoading(true);
+                const response = await getCurrentSubscription();
+                setSubscription(response.subscription);
+            } catch (err) {
+                console.error('Erreur:', err);
+                addToast(
+                    err instanceof Error ? err.message : 'Impossible de charger votre abonnement',
+                    'error'
+                );
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchSubscription();
+    }, []);
 
     const handleCancelSubscription = async () => {
         try {
             setIsProcessing(true);
-            // Simulation d'appel API
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            await cancelSubscription();
             addToast('Abonnement annulé avec succès', 'success');
             setShowCancelModal(false);
-            // Dans la vraie app: rafraîchir les données
-            // window.location.reload();
+            // Rafraîchir les données
+            const response = await getCurrentSubscription();
+            setSubscription(response.subscription);
         } catch (err) {
             console.error('Erreur:', err);
-            addToast('Impossible d\'annuler l\'abonnement', 'error');
+            addToast(
+                err instanceof Error ? err.message : 'Impossible d\'annuler l\'abonnement',
+                'error'
+            );
         } finally {
             setIsProcessing(false);
         }
     };
+
+    const isProUser = subscription ? isPro(subscription) : false;
+    const currentPlan = subscription ? subscriptionPlans[subscription.plan] : null;
+    const proPlan = subscriptionPlans.pro;
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center h-96">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            </div>
+        );
+    }
+
+    if (!subscription) {
+        return (
+            <div className="text-center">
+                <p className="text-gray-600 dark:text-gray-400">Impossible de charger votre abonnement</p>
+            </div>
+        );
+    }
 
     return (
         <div className="max-w-4xl">
@@ -207,7 +248,14 @@ export default function BillingSettingsPage() {
                 isProcessing={isProcessing}
             />
             
-            <ToastContainer toasts={toasts} onRemove={removeToast} />
+            {toasts.map((toast) => (
+                <Toast
+                    key={toast.id}
+                    message={toast.message}
+                    type={toast.type}
+                    onClose={() => removeToast(toast.id)}
+                />
+            ))}
         </div>
     );
 }

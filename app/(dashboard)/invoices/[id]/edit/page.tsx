@@ -1,18 +1,21 @@
 'use client';
 
 import { InvoiceFormBuilder } from '@/components/forms/InvoiceFormBuilder';
-import { mockInvoices } from '@/consts/invoices';
-import { ArrowLeft } from 'lucide-react';
+import { Toast, useToast } from '@/components/ui/Toast';
+import type { Invoice } from '@/consts/invoices';
+import { getInvoice, updateInvoice } from '@/lib/invoices';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { use, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { use } from 'react';
 
 interface FormData {
     clientId: string;
     invoiceNumber: string;
     invoiceDate: string;
     dueDate: string;
-    status: 'paid' | 'unpaid' | 'draft';
+    status: 'paid' | 'unpaid' | 'draft' | 'sent';
     items: Array<{
         description: string;
         quantity: number;
@@ -25,10 +28,38 @@ interface FormData {
 export default function EditInvoicePage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
     const router = useRouter();
+    const { toasts, addToast, removeToast } = useToast();
+    const [invoice, setInvoice] = useState<Invoice | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [isLoadingInvoice, setIsLoadingInvoice] = useState(true);
 
-    // Find the invoice
-    const invoice = mockInvoices.find((inv) => inv.id === id);
+    useEffect(() => {
+        const fetchInvoice = async () => {
+            try {
+                setIsLoadingInvoice(true);
+                const invoiceData = await getInvoice(id);
+                setInvoice(invoiceData);
+            } catch (err) {
+                console.error('Erreur:', err);
+                addToast(
+                    err instanceof Error ? err.message : 'Impossible de charger la facture',
+                    'error'
+                );
+            } finally {
+                setIsLoadingInvoice(false);
+            }
+        };
+
+        fetchInvoice();
+    }, [id]);
+
+    if (isLoadingInvoice) {
+        return (
+            <div className="flex items-center justify-center h-96">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            </div>
+        );
+    }
 
     if (!invoice) {
         return (
@@ -66,17 +97,17 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
     const handleSubmit = async (data: FormData) => {
         setIsLoading(true);
         try {
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            // In a real app, you would PUT to your API here
-            console.log('Updating invoice:', id, data);
-
-            // Redirect to invoice detail or list
+            await updateInvoice(id, data);
+            addToast('Facture modifiée avec succès', 'success');
             router.push('/invoices');
             router.refresh();
         } catch (error) {
-            console.error('Error updating invoice:', error);
+            console.error('Erreur:', error);
+            addToast(
+                error instanceof Error ? error.message : 'Impossible de modifier la facture',
+                'error'
+            );
+        } finally {
             throw error;
         } finally {
             setIsLoading(false);
@@ -105,6 +136,15 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
                 onSubmit={handleSubmit}
                 isLoading={isLoading}
             />
+
+            {toasts.map((toast) => (
+                <Toast
+                    key={toast.id}
+                    message={toast.message}
+                    type={toast.type}
+                    onClose={() => removeToast(toast.id)}
+                />
+            ))}
         </div>
     );
 }

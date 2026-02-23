@@ -2,15 +2,29 @@
 
 import { Button } from '@/components/ui/Button';
 import { Header } from '@/components/ui/Header';
-import { ToastContainer, useToast } from '@/components/ui/Toast';
+import { Toast, useToast } from '@/components/ui/Toast';
+import { usePublicPlans } from '@/lib/hooks/usePublicPlans';
 import { useStripeCheckout } from '@/lib/hooks/useStripeCheckout';
-import { Check, Loader, RotateCcw, Shield, Zap } from 'lucide-react';
+import { Check, Loader2, RotateCcw, Shield, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect } from 'react';
 
 export default function PricingPage() {
   const { isLoading, error, createCheckoutSession, resetError } = useStripeCheckout();
   const { toasts, addToast, removeToast } = useToast();
+  const { plans, loading: plansLoading, fetch } = usePublicPlans();
+
+  // Charger les plans
+  useEffect(() => {
+    fetch().catch(err => {
+      console.error('Erreur:', err);
+      addToast(
+        err instanceof Error ? err.message : 'Impossible de charger les plans',
+        'error'
+      );
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Afficher les toasts d'erreur Stripe
   useEffect(() => {
@@ -39,161 +53,100 @@ export default function PricingPage() {
       {/* Pricing Card */}
       <section className="pb-16 px-6">
         <div className="max-w-5xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Free Plan */}
-            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 p-8 relative flex flex-col">
-              {/* Header */}
-              <div className="text-center mb-8">
-                <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                  Plan Free
-                </h2>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Parfait pour commencer.
-                </p>
-              </div>
-
-              {/* Price */}
-              <div className="text-center mb-8">
-                <div className="flex items-baseline justify-center gap-2">
-                  <span className="text-5xl font-bold text-gray-900 dark:text-white">0€</span>
-                  <span className="text-xl text-gray-600 dark:text-gray-400">/mois</span>
-                </div>
-              </div>
-
-              {/* Features */}
-              <ul className="space-y-4 mb-8 grow">
-                <li className="flex items-start gap-3">
-                  <div className="mt-0.5 h-6 w-6 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
-                    <Check className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                  </div>
-                  <span className="text-gray-700 dark:text-gray-300 font-medium">
-                    Jusqu&apos;à 3 clients
-                  </span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <div className="mt-0.5 h-6 w-6 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
-                    <Check className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                  </div>
-                  <span className="text-gray-700 dark:text-gray-300 font-medium">
-                    5 factures par mois
-                  </span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <div className="mt-0.5 h-6 w-6 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
-                    <Check className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                  </div>
-                  <span className="text-gray-700 dark:text-gray-300 font-medium">
-                    PDF avec watermark
-                  </span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <div className="mt-0.5 h-6 w-6 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
-                    <Check className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                  </div>
-                  <span className="text-gray-700 dark:text-gray-300 font-medium">
-                    Dashboard basique
-                  </span>
-                </li>
-              </ul>
-
-              {/* CTA Button */}
-              <Link href="/register">
-                <Button variant="secondary" className="w-full text-lg py-4 border-2 border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700">
-                  Commencer gratuitement
-                </Button>
-              </Link>
+          {plansLoading ? (
+            <div className="flex justify-center items-center py-16">
+              <Loader2 className="h-8 w-8 text-blue-600 dark:text-blue-400 animate-spin" />
             </div>
+          ) : plans.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {plans.map((plan, index) => (
+                  <div
+                    key={plan.id}
+                    className={`bg-white dark:bg-gray-900 rounded-2xl shadow-lg p-8 relative flex flex-col ${index === 0
+                      ? 'border border-gray-200 dark:border-gray-800'
+                      : 'border-2 border-blue-200 dark:border-blue-800 transform md:scale-105'
+                      }`}
+                  >
+                    {/* Badge for recommended plan */}
+                    {index === 0 && (
+                      <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                        <span className="inline-block px-4 py-1.5 bg-blue-600 dark:bg-blue-700 text-white text-sm font-semibold rounded-full shadow-md">
+                          Recommandé
+                        </span>
+                      </div>
+                    )}
 
-            {/* Pro Plan */}
-            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border-2 border-blue-200 dark:border-blue-800 p-8 relative flex flex-col transform md:scale-105">
-              {/* Badge */}
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                <span className="inline-block px-4 py-1.5 bg-blue-600 dark:bg-blue-700 text-white text-sm font-semibold rounded-full shadow-md">
-                  Recommandé
-                </span>
+                    {/* Header */}
+                    <div className="text-center mb-8">
+                      <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                        {plan.name}
+                      </h2>
+                      <p className="text-gray-600 dark:text-gray-400">
+                        {plan.description}
+                      </p>
+                    </div>
+
+                    {/* Price */}
+                    <div className="text-center mb-8">
+                      <div className="flex items-baseline justify-center gap-2">
+                        <span className="text-5xl font-bold text-gray-900 dark:text-white">
+                          {plan.price === 0 ? '0' : plan.price}€
+                        </span>
+                        <span className="text-xl text-gray-600 dark:text-gray-400">/{plan.interval}</span>
+                      </div>
+                    </div>
+
+                    {/* Features */}
+                    <ul className="space-y-4 mb-8 grow">
+                      {plan.features && Array.isArray(plan.features) && plan.features.map((feature, featureIndex) => (
+                        <li key={featureIndex} className="flex items-start gap-3">
+                          <div
+                            className={`mt-0.5 h-6 w-6 rounded-full flex items-center justify-center shrink-0 ${index === 0
+                              ? 'bg-gray-100 dark:bg-gray-800'
+                              : 'bg-blue-100 dark:bg-blue-900/30'
+                              }`}
+                          >
+                            <Check
+                              className={`h-4 w-4 ${index === 0
+                                ? 'text-gray-600 dark:text-gray-400'
+                                : 'text-blue-600 dark:text-blue-400'
+                                }`}
+                            />
+                          </div>
+                          <span className="text-gray-700 dark:text-gray-300 font-medium">
+                            {feature}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    {/* CTA Button */}
+                    {plan.price === 0 ? (
+                      <Link href="/register">
+                        <Button variant="secondary" className="w-full text-lg py-4 border-2 border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700">
+                          Commencer gratuitement
+                        </Button>
+                      </Link>
+                    ) : (
+                      <button
+                        onClick={createCheckoutSession}
+                        disabled={isLoading}
+                        className="w-full bg-blue-600 dark:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 text-lg"
+                      >
+                          {isLoading && <Loader2 className="h-5 w-5 animate-spin" />}
+                          {isLoading ? 'Redirection en cours...' : `Débloquer ${plan.name}`}
+                        </button>
+                    )}
+                  </div>
+                ))}
               </div>
-
-              {/* Header */}
-              <div className="text-center mb-8 mt-2">
-                <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                  Plan Pro
-                </h2>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Tout ce dont vous avez besoin pour gérer votre activité.
-                </p>
-              </div>
-
-              {/* Price */}
-              <div className="text-center mb-8">
-                <div className="flex items-baseline justify-center gap-2">
-                  <span className="text-5xl font-bold text-gray-900 dark:text-white">12€</span>
-                  <span className="text-xl text-gray-600 dark:text-gray-400">/mois</span>
-                </div>
-              </div>
-
-              {/* Features */}
-              <ul className="space-y-4 mb-8 grow">
-                <li className="flex items-start gap-3">
-                  <div className="mt-0.5 h-6 w-6 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
-                    <Check className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <span className="text-gray-700 dark:text-gray-300 font-medium">
-                    Clients illimités
-                  </span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <div className="mt-0.5 h-6 w-6 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
-                    <Check className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <span className="text-gray-700 dark:text-gray-300 font-medium">
-                    Factures illimitées
-                  </span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <div className="mt-0.5 h-6 w-6 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
-                    <Check className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <span className="text-gray-700 dark:text-gray-300 font-medium">
-                    Génération PDF professionnelle
-                  </span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <div className="mt-0.5 h-6 w-6 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
-                    <Check className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <span className="text-gray-700 dark:text-gray-300 font-medium">
-                    Export CSV
-                  </span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <div className="mt-0.5 h-6 w-6 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
-                    <Check className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <span className="text-gray-700 dark:text-gray-300 font-medium">
-                    Tableau de bord avancé avec graphiques
-                  </span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <div className="mt-0.5 h-6 w-6 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
-                    <Check className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <span className="text-gray-700 dark:text-gray-300 font-medium">
-                    Support email prioritaire
-                  </span>
-                </li>
-              </ul>
-
-              {/* CTA Button */}
-              <button
-                onClick={createCheckoutSession}
-                disabled={isLoading}
-                className="w-full bg-blue-600 dark:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 text-lg"
-              >
-                {isLoading && <Loader className="h-5 w-5 animate-spin" />}
-                {isLoading ? 'Redirection en cours...' : 'Débloquer clients et factures illimités'}
-              </button>
+          ) : (
+            <div className="text-center py-16">
+              <p className="text-lg text-gray-600 dark:text-gray-400">
+                Impossible de charger les plans. Veuillez rafraîchir la page.
+              </p>
             </div>
-          </div>
+          )}
         </div>
       </section>
 
@@ -314,7 +267,15 @@ export default function PricingPage() {
       </section>
 
       {/* Toast Notifications */}
-      <ToastContainer toasts={toasts} onRemove={removeToast} />
+      <div className="fixed bottom-4 right-4 space-y-2 z-50">
+        {toasts.map((toast) => (
+          <Toast
+            key={toast.id}
+            toast={toast}
+            onClose={() => removeToast(toast.id)}
+          />
+        ))}
+      </div>
     </div>
   );
 }

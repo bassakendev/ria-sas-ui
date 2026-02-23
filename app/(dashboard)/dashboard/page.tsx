@@ -2,14 +2,9 @@
 'use client';
 
 import { Button } from '@/components/ui/Button';
-import { ToastContainer, useToast } from '@/components/ui/Toast';
-import {
-  mockDashboardStats,
-  mockRecentInvoices,
-  mockRevenueChartData,
-  type RecentInvoice
-} from '@/consts/dashboard';
+import { useToast } from '@/components/ui/Toast';
 import { exportDashboardInvoicesCSV } from '@/lib/csvExport';
+import { useDashboard } from '@/lib/hooks/useDashboard';
 import {
   ArrowRight,
   Clock,
@@ -21,7 +16,7 @@ import {
   Users
 } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Area, AreaChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 // KPI Card Component
@@ -102,32 +97,17 @@ function DashboardSkeleton() {
 
 export default function DashboardPage() {
   const { toasts, addToast, removeToast } = useToast();
-  const [stats, setStats] = useState<typeof mockDashboardStats | null>(null);
-  const [recentInvoices, setRecentInvoices] = useState<RecentInvoice[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const { stats, recentInvoices, loading, error, data, fetch } = useDashboard();
 
   useEffect(() => {
-    fetchDashboardData();
+    fetch().catch(err => {
+      console.error('Erreur:', err);
+      addToast(
+        err instanceof Error ? err.message : 'Impossible de charger les données du tableau de bord',
+        'error'
+      );
+    });
   }, []);
-
-  const fetchDashboardData = async () => {
-    try {
-      setError(false);
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 800));
-
-      // Use mock data
-      setStats(mockDashboardStats);
-      setRecentInvoices(mockRecentInvoices);
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (err) {
-      console.error('Failed to fetch dashboard stats');
-      setError(true);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Export CSV
   const handleExportCSV = async () => {
@@ -159,6 +139,13 @@ export default function DashboardPage() {
 
   return (
     <div>
+      {loading && (
+        <div className="flex items-center justify-center h-96">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        </div>
+      )}
+
+      {!loading && (
       {/* Page Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
@@ -168,32 +155,36 @@ export default function DashboardPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <KPICard
-          label="Revenus"
-          value={`${stats?.total_revenue.toFixed(2) || '0.00'}€`}
-          icon={DollarSign}
-          accentColor="blue"
-        />
-        <KPICard
-          label="Impayés"
-          value={`${stats?.total_unpaid.toFixed(2) || '0.00'}€`}
-          icon={Clock}
-          accentColor="orange"
-        />
-        <KPICard
-          label="Clients"
-          value={stats?.total_clients || 0}
-          icon={Users}
-          accentColor="purple"
-        />
-        <KPICard
-          label="Factures"
-          value={stats?.total_invoices || 0}
-          icon={FileText}
-          accentColor="gray"
-        />
-      </div>
+  {
+    stats && (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <KPICard
+        label="Revenus"
+        value={`${stats.totalRevenue.toFixed(2)}€`}
+        icon={DollarSign}
+        accentColor="blue"
+      />
+      <KPICard
+        label="Impayés"
+        value={`${stats.pendingRevenue.toFixed(2)}€`}
+        icon={Clock}
+        accentColor="orange"
+      />
+      <KPICard
+        label="Clients"
+        value={stats.totalClients}
+        icon={Users}
+        accentColor="purple"
+      />
+      <KPICard
+        label="Factures"
+        value={stats.totalInvoices}
+        icon={FileText}
+        accentColor="gray"
+      />
+    </div>
+  )
+  }
 
       {/* Revenue Chart Placeholder */}
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm p-6 mb-8">
@@ -207,50 +198,56 @@ export default function DashboardPage() {
         </div>
 
         {/* Recharts Area Chart */}
-        <ResponsiveContainer width="100%" height={300}>
-          <AreaChart
-            data={mockRevenueChartData}
-            margin={{ top: 20, right: 30, left: 0, bottom: 20 }}
-          >
-            <defs>
-              <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
-                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-gray-800" />
-            <XAxis
-              dataKey="month"
-              stroke="#6b7280"
-              className="dark:stroke-gray-500"
-            />
-            <YAxis
-              stroke="#6b7280"
-              className="dark:stroke-gray-500"
-              label={{ value: '€', angle: -90, position: 'insideLeft' }}
-            />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: 'rgb(17, 24, 39)',
-                border: '1px solid rgb(55, 65, 81)',
-                borderRadius: '8px',
-                color: '#f3f4f6'
-              }}
-              formatter={(value: any) => `${value.toLocaleString('fr-FR')}€`}
-              labelStyle={{ color: '#d1d5db' }}
-            />
-            <Legend wrapperStyle={{ color: '#6b7280' }} />
-            <Area
-              type="monotone"
-              dataKey="total"
-              stroke="#3b82f6"
-              strokeWidth={2}
-              fillOpacity={1}
-              fill="url(#colorTotal)"
-              name="Revenus"
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+        {data?.chartData && data.chartData.length > 0 ? (
+          <ResponsiveContainer width="100%" height={300}>
+            <AreaChart
+              data={data.chartData}
+              margin={{ top: 20, right: 30, left: 0, bottom: 20 }}
+            >
+              <defs>
+                <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
+                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-gray-800" />
+              <XAxis
+                dataKey="date"
+                stroke="#6b7280"
+                className="dark:stroke-gray-500"
+              />
+              <YAxis
+                stroke="#6b7280"
+                className="dark:stroke-gray-500"
+                label={{ value: '€', angle: -90, position: 'insideLeft' }}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'rgb(17, 24, 39)',
+                  border: '1px solid rgb(55, 65, 81)',
+                  borderRadius: '8px',
+                  color: '#f3f4f6'
+                }}
+                formatter={(value: any) => `${value.toLocaleString('fr-FR')}€`}
+                labelStyle={{ color: '#d1d5db' }}
+              />
+              <Legend wrapperStyle={{ color: '#6b7280' }} />
+              <Area
+                type="monotone"
+                dataKey="revenue"
+                stroke="#3b82f6"
+                strokeWidth={2}
+                fillOpacity={1}
+                fill="url(#colorTotal)"
+                name="Revenus"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="flex items-center justify-center h-80">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          </div>
+        )}
       </div>
 
       {/* Recent Invoices */}
@@ -391,7 +388,18 @@ export default function DashboardPage() {
           </div>
         </Link>
       </div>
-      <ToastContainer toasts={toasts} onRemove={removeToast} />
+      )
+}
+{
+  toasts.map((toast) => (
+    <Toast
+      key={toast.id}
+      message={toast.message}
+      type={toast.type}
+      onClose={() => removeToast(toast.id)}
+    />
+  ))
+}
     </div>
   );
 }

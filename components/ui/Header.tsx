@@ -53,6 +53,11 @@ export const Header = () => {
                                 Login
                             </Button>
                         </Link>
+                            <Link href="/admin-login" title="Admin Portal">
+                                <Button variant="secondary" className="border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 text-sm">
+                                    Admin
+                                </Button>
+                            </Link>
                         <Link href="/register">
                             <Button variant="primary" className="bg-blue-600 px-6 py-3 hover:bg-blue-700">
                                 Start Free
@@ -98,6 +103,20 @@ export const Header = () => {
                             <Link href="/login" onClick={() => setMenuOpen(false)}>
                                 <Button variant="secondary" className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700">
                                     Login
+                                </Button>
+                            </Link>
+                            <Link href="/admin-login" onClick={() => setMenuOpen(false)}>
+                                <Button variant="secondary" className="w-full border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30">
+                                    Admin Portal
+                                </Button>
+                            </Link>
+                            <Link href="/register" onClick={() => setMenuOpen(false)}>
+                                <Button variant="primary" className="w-full bg-blue-600 hover:bg-blue-700">
+                                    Start Free
+                                </Button>
+                            </Link>
+                        </>
+                    )}
                                 </Button>
                             </Link>
                             <Link href="/register" onClick={() => setMenuOpen(false)}>

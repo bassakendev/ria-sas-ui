@@ -2,10 +2,12 @@
 
 import { Button } from '@/components/ui/Button';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
-import { ToastContainer, useToast } from '@/components/ui/Toast';
-import { getStatusColor, getStatusLabel, mockInvoices, mockInvoiceStats } from '@/consts/invoices';
+import { Toast, useToast } from '@/components/ui/Toast';
+import { getStatusColor, getStatusLabel } from '@/consts/invoices';
 import { exportInvoicesCSV } from '@/lib/csvExport';
-import { CheckCircle, ChevronLeft, ChevronRight, Clock, DollarSign, Download, Edit2, Eye, FileText, Plus, Search, Trash2 } from 'lucide-react';
+import { useInvoices } from '@/lib/hooks/useInvoices';
+import { deleteInvoice, markInvoiceAsPaid, sendInvoiceEmail, sendInvoiceWhatsapp } from '@/lib/invoices';
+import { CheckCircle, ChevronLeft, ChevronRight, Clock, DollarSign, Download, Edit2, Eye, FileText, Loader2, Plus, Search, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
@@ -104,65 +106,32 @@ function EmptyState() {
 
 export default function InvoicesPage() {
   const { toasts, addToast, removeToast } = useToast();
-  const [invoices, setInvoices] = useState(mockInvoices);
-  const [filteredInvoices, setFilteredInvoices] = useState(mockInvoices);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const { data, stats, loading, error, fetch, fetchStats } = useInvoices();
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<'all' | 'paid' | 'unpaid'>('all');
+  const [filterType, setFilterType] = useState<'all' | 'paid' | 'unpaid' | 'draft'>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [deleteInvoiceId, setDeleteInvoiceId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const itemsPerPage = 6;
+  const [isSending, setIsSending] = useState<string | null>(null);
+  const [isMarking, setIsMarking] = useState<string | null>(null);
+  const itemsPerPage = 10;
 
-  // Load data
+  // Load data on mount
   useEffect(() => {
-    const loadInvoices = async () => {
-      try {
-        setError(false);
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 600));
-        setInvoices(mockInvoices);
-        setFilteredInvoices(mockInvoices);
-      } catch (err) {
-        console.error('Failed to fetch invoices', err);
-        setError(true);
-      } finally {
-        setLoading(false);
-      }
+    const statusMap: Record<string, string | undefined> = {
+      all: undefined,
+      paid: 'paid',
+      unpaid: 'unpaid',
+      draft: 'draft',
     };
 
-    loadInvoices();
-  }, []);
-
-  // Filter and search
-  useEffect(() => {
-    let result = invoices;
-
-    // Search filter
-    if (searchTerm) {
-      result = result.filter(
-        (invoice) =>
-          invoice.invoice_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          invoice.client.name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // Status filter
-    if (filterType === 'paid') {
-      result = result.filter((invoice) => invoice.status === 'paid');
-    } else if (filterType === 'unpaid') {
-      result = result.filter((invoice) => invoice.status === 'unpaid' || invoice.status === 'sent');
-    }
-
-    setFilteredInvoices(result);
-    setCurrentPage(1);
-  }, [searchTerm, filterType, invoices]);
+    fetch(currentPage, itemsPerPage, statusMap[filterType], searchTerm);
+    fetchStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, searchTerm, filterType]);
 
   // Pagination
-  const totalPages = Math.ceil(filteredInvoices.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedInvoices = filteredInvoices.slice(startIndex, startIndex + itemsPerPage);
+  const totalPages = data ? Math.ceil(data.total / itemsPerPage) : 1;
 
   // Export CSV
   const handleExportCSV = async () => {
@@ -184,18 +153,15 @@ export default function InvoicesPage() {
 
     try {
       setIsDeleting(true);
-
-      // TODO: Appel API pour supprimer la facture
-      // const response = await fetch(`/api/invoices/${deleteInvoiceId}`, {
-      //   method: 'DELETE',
-      //   headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
-      // });
-      // if (!response.ok) throw new Error('Échec de la suppression');
-
-      // Simulation: Supprimer localement
-      setInvoices((prev) => prev.filter((inv) => inv.id !== deleteInvoiceId));
-      setFilteredInvoices((prev) => prev.filter((inv) => inv.id !== deleteInvoiceId));
-
+      await deleteInvoice(deleteInvoiceId);
+      const statusMap: Record<string, string | undefined> = {
+        all: undefined,
+        paid: 'paid',
+        unpaid: 'unpaid',
+        draft: 'draft',
+      };
+      await fetch(currentPage, itemsPerPage, statusMap[filterType], searchTerm);
+      await fetchStats();
       addToast('Facture supprimée avec succès', 'success');
       setDeleteInvoiceId(null);
     } catch (err) {
@@ -206,6 +172,59 @@ export default function InvoicesPage() {
       );
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  // Send invoice
+  const handleSendInvoice = async (invoiceId: string, type: 'email' | 'whatsapp') => {
+    try {
+      setIsSending(invoiceId);
+      if (type === 'email') {
+        await sendInvoiceEmail(invoiceId);
+      } else {
+        await sendInvoiceWhatsapp(invoiceId);
+      }
+      const statusMap: Record<string, string | undefined> = {
+        all: undefined,
+        paid: 'paid',
+        unpaid: 'unpaid',
+        draft: 'draft',
+      };
+      await fetch(currentPage, itemsPerPage, statusMap[filterType], searchTerm);
+      addToast(type === 'email' ? 'Facture envoyée par email' : 'Facture envoyée par WhatsApp', 'success');
+    } catch (err) {
+      console.error('Erreur:', err);
+      addToast(
+        err instanceof Error ? err.message : type === 'email' ? 'Impossible d\'envoyer la facture par email' : 'Impossible d\'envoyer la facture par WhatsApp',
+        'error'
+      );
+    } finally {
+      setIsSending(null);
+    }
+  };
+
+  // Mark as paid
+  const handleMarkAsPaid = async (invoiceId: string) => {
+    try {
+      setIsMarking(invoiceId);
+      await markInvoiceAsPaid(invoiceId);
+      const statusMap: Record<string, string | undefined> = {
+        all: undefined,
+        paid: 'paid',
+        unpaid: 'unpaid',
+        draft: 'draft',
+      };
+      await fetch(currentPage, itemsPerPage, statusMap[filterType], searchTerm);
+      await fetchStats();
+      addToast('Facture marquée comme payée', 'success');
+    } catch (err) {
+      console.error('Erreur:', err);
+      addToast(
+        err instanceof Error ? err.message : 'Impossible de marquer la facture comme payée',
+        'error'
+      );
+    } finally {
+      setIsMarking(null);
     }
   };
 
@@ -247,34 +266,36 @@ export default function InvoicesPage() {
       </div>
 
       {/* KPI Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <KPICard
-          label="Total factures"
-          value={mockInvoiceStats.total}
-          icon={FileText}
-          accentColor="blue"
-        />
-        <KPICard
-          label="Factures payées"
-          value={mockInvoiceStats.paid}
-          icon={CheckCircle}
-          accentColor="green"
-        />
-        <KPICard
-          label="Factures impayées"
-          value={mockInvoiceStats.unpaid}
-          icon={Clock}
-          accentColor="orange"
-        />
-        <KPICard
-          label="Montant total facturé"
-          value={`${mockInvoiceStats.totalRevenue.toFixed(2)}€`}
-          icon={DollarSign}
-          accentColor="gray"
-        />
-      </div>
+      {stats && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <KPICard
+            label="Total factures"
+            value={stats.total}
+            icon={FileText}
+            accentColor="blue"
+          />
+          <KPICard
+            label="Factures payées"
+            value={stats.paid}
+            icon={CheckCircle}
+            accentColor="green"
+          />
+          <KPICard
+            label="Factures impayées"
+            value={stats.unpaid}
+            icon={Clock}
+            accentColor="orange"
+          />
+          <KPICard
+            label="Montant total facturé"
+            value={`${stats.totalRevenue.toFixed(2)}€`}
+            icon={DollarSign}
+            accentColor="gray"
+          />
+        </div>
+      )}
 
-      {invoices.length === 0 ? (
+      {!data || data.invoices.length === 0 ? (
         <EmptyState />
       ) : (
         <>
@@ -293,10 +314,11 @@ export default function InvoicesPage() {
             </div>
             <select
               value={filterType}
-              onChange={(e) => setFilterType(e.target.value as 'all' | 'paid' | 'unpaid')}
+                onChange={(e) => setFilterType(e.target.value as 'all' | 'paid' | 'unpaid' | 'draft')}
               className="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">Toutes les factures</option>
+                <option value="draft">Brouillons</option>
               <option value="paid">Payées uniquement</option>
               <option value="unpaid">Impayées uniquement</option>
             </select>
@@ -328,7 +350,7 @@ export default function InvoicesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
-                {paginatedInvoices.map((invoice) => (
+                  {data?.invoices.map((invoice) => (
                   <tr key={invoice.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                     <td className="px-6 py-4">
                       <p className="font-semibold text-gray-900 dark:text-white">{invoice.invoice_number}</p>
@@ -365,6 +387,48 @@ export default function InvoicesPage() {
                             <Edit2 className="h-4 w-4 text-blue-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white" />
                           </button>
                         </Link>
+                          {invoice.status === 'draft' && (
+                            <div className="flex gap-1">
+                              <button
+                                onClick={() => handleSendInvoice(invoice.id, 'email')}
+                                disabled={isSending === invoice.id}
+                                className="p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors group disabled:opacity-50"
+                                title="Envoyer par email"
+                              >
+                                {isSending === invoice.id ? (
+                                  <Loader2 className="h-4 w-4 text-blue-600 animate-spin" />
+                                ) : (
+                                  <FileText className="h-4 w-4 text-blue-600 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400" />
+                                )}
+                              </button>
+                              <button
+                                onClick={() => handleSendInvoice(invoice.id, 'whatsapp')}
+                                disabled={isSending === invoice.id}
+                                className="p-2 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors group disabled:opacity-50"
+                                title="Envoyer par WhatsApp"
+                              >
+                                {isSending === invoice.id ? (
+                                  <Loader2 className="h-4 w-4 text-green-600 animate-spin" />
+                                ) : (
+                                  <FileText className="h-4 w-4 text-green-600 dark:text-gray-400 group-hover:text-green-600 dark:group-hover:text-green-400" />
+                                )}
+                              </button>
+                            </div>
+                          )}
+                          {(invoice.status === 'sent' || invoice.status === 'unpaid') && (
+                            <button
+                              onClick={() => handleMarkAsPaid(invoice.id)}
+                              disabled={isMarking === invoice.id}
+                              className="p-2 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors group disabled:opacity-50"
+                              title="Marquer comme payée"
+                            >
+                              {isMarking === invoice.id ? (
+                                <Loader2 className="h-4 w-4 text-green-600 animate-spin" />
+                              ) : (
+                                <CheckCircle className="h-4 w-4 text-green-600 dark:text-gray-400 group-hover:text-green-600 dark:group-hover:text-green-400" />
+                              )}
+                            </button>
+                          )}
                         <button
                           onClick={() => setDeleteInvoiceId(invoice.id)}
                           className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors group"
@@ -416,7 +480,7 @@ export default function InvoicesPage() {
 
           {/* Results info */}
           <p className="mt-4 text-sm text-gray-600 dark:text-gray-400">
-            Affichage {startIndex + 1} à {Math.min(startIndex + itemsPerPage, filteredInvoices.length)} sur {filteredInvoices.length} factures
+              Affichage {((currentPage - 1) * itemsPerPage) + 1} à {Math.min(currentPage * itemsPerPage, data?.total || 0)} sur {data?.total || 0} factures
           </p>
         </>
       )}
@@ -433,7 +497,13 @@ export default function InvoicesPage() {
         isProcessing={isDeleting}
       />
 
-      <ToastContainer toasts={toasts} onRemove={removeToast} />
+      {toasts.map((toast) => (
+        <Toast
+          key={toast.id}
+          toast={toast}
+          onClose={() => removeToast(toast.id)}
+        />
+      ))}
     </div>
   );
 }

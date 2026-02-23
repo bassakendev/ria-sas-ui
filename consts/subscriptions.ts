@@ -4,6 +4,7 @@ export type SubscriptionStatus = 'active' | 'canceled' | 'expired' | 'trialing';
 export interface SubscriptionPlan {
     id: PlanType;
     name: string;
+    description?: string;
     price: number;
     currency: string;
     interval: 'month' | 'year';

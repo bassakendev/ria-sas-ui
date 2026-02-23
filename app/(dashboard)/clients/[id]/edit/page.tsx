@@ -2,11 +2,13 @@
 
 import { ClientFormBuilder } from '@/components/forms/ClientFormBuilder';
 import { Button } from '@/components/ui/Button';
-import { mockClients } from '@/consts/clients';
-import { ArrowLeft } from 'lucide-react';
+import { Toast, useToast } from '@/components/ui/Toast';
+import type { Client } from '@/consts/clients';
+import { getClient, updateClient } from '@/lib/clients';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { use, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 
 interface FormData {
     name: string;
@@ -22,10 +24,56 @@ interface FormData {
 export default function EditClientPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
     const router = useRouter();
+    const { toasts, addToast, removeToast } = useToast();
+    const [client, setClient] = useState<Client | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [isLoadingClient, setIsLoadingClient] = useState(true);
 
-    // Find client in mock data
-    const client = mockClients.find(c => c.id === id);
+    useEffect(() => {
+        const fetchClient = async () => {
+            try {
+                setIsLoadingClient(true);
+                const clientData = await getClient(id);
+                setClient(clientData);
+            } catch (err) {
+                console.error('Erreur:', err);
+                addToast(
+                    err instanceof Error ? err.message : 'Impossible de charger le client',
+                    'error'
+                );
+            } finally {
+                setIsLoadingClient(false);
+            }
+        };
+
+        fetchClient();
+    }, [id]);
+
+    const handleSubmit = async (data: FormData) => {
+        setIsLoading(true);
+        try {
+            await updateClient(id, data);
+            addToast('Client modifié avec succès', 'success');
+            router.push('/clients');
+            router.refresh();
+        } catch (error) {
+            console.error('Erreur:', error);
+            addToast(
+                error instanceof Error ? error.message : 'Impossible de modifier le client',
+                'error'
+            );
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    if (isLoadingClient) {
+        return (
+            <div className="flex items-center justify-center h-96">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            </div>
+        );
+    }
 
     if (!client) {
         return (
@@ -41,26 +89,6 @@ export default function EditClientPage({ params }: { params: Promise<{ id: strin
             </div>
         );
     }
-
-    const handleSubmit = async (data: FormData) => {
-        setIsLoading(true);
-        try {
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            // In a real app, you would PUT to your API here
-            console.log('Updating client:', id, data);
-            // Show success toast (you could add toast notifications here)
-            // For now, just redirect
-            router.push('/clients');
-            router.refresh();
-        } catch (error) {
-            console.error('Error updating client:', error);
-            throw error;
-        } finally {
-            setIsLoading(false);
-        }
-    };
 
     return (
         <div>
@@ -82,6 +110,15 @@ export default function EditClientPage({ params }: { params: Promise<{ id: strin
                 onSubmit={handleSubmit}
                 isLoading={isLoading}
             />
+
+            {toasts.map((toast) => (
+                <Toast
+                    key={toast.id}
+                    message={toast.message}
+                    type={toast.type}
+                    onClose={() => removeToast(toast.id)}
+                />
+            ))}
         </div>
     );
 }

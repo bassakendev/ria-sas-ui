@@ -1,10 +1,10 @@
 'use client';
 
+import type { FeedbackType } from '@/consts/feedback';
+import { submitFeedback } from '@/lib/feedback';
 import { Mail, MessageCircle, MessageSquare, Send, X } from 'lucide-react';
 import { useState } from 'react';
 import { ToastContainer, useToast } from './Toast';
-
-type FeedbackType = 'question' | 'bug' | 'feature' | 'other';
 
 export function FeedbackButton() {
     const [isOpen, setIsOpen] = useState(false);
@@ -25,21 +25,30 @@ export function FeedbackButton() {
 
         setIsSubmitting(true);
 
-        // Simulation d'envoi
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        try {
+            // Appel API pour soumettre le feedback
+            const response = await submitFeedback({
+                type: feedbackType,
+                email,
+                subject,
+                message,
+            });
 
-        // Ici, vous intégrerez l'envoi réel vers votre backend
-        console.log('Feedback envoyé:', { feedbackType, email, subject, message });
+            addToast('Votre message a été envoyé avec succès !', 'success');
+            console.log('Feedback ID:', response.id);
 
-        addToast('Votre message a été envoyé avec succès !', 'success');
-        
-        // Reset form
-        setEmail('');
-        setSubject('');
-        setMessage('');
-        setFeedbackType('question');
-        setIsOpen(false);
-        setIsSubmitting(false);
+            // Reset form
+            setEmail('');
+            setSubject('');
+            setMessage('');
+            setFeedbackType('question');
+            setIsOpen(false);
+        } catch (error) {
+            console.error('Erreur lors de l\'envoi du feedback:', error);
+            addToast('Erreur lors de l\'envoi. Veuillez réessayer.', 'error');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const feedbackTypes = [

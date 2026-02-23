@@ -2,9 +2,10 @@
 
 import { Button } from '@/components/ui/Button';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
-import { ToastContainer, useToast } from '@/components/ui/Toast';
-import { mockClients, mockClientStats, type Client } from '@/consts/clients';
+import { Toast, useToast } from '@/components/ui/Toast';
+import { deleteClient } from '@/lib/clients';
 import { exportClientsCSV } from '@/lib/csvExport';
+import { useClients } from '@/lib/hooks/useClients';
 import { ChevronLeft, ChevronRight, DollarSign, Download, Edit2, Eye, Search, Trash2, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
@@ -97,65 +98,27 @@ function EmptyState() {
 
 export default function ClientsPage() {
   const { toasts, addToast, removeToast } = useToast();
-  const [clients, setClients] = useState<Client[]>([]);
-  const [filteredClients, setFilteredClients] = useState<Client[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const { data, stats, loading, error, fetch, fetchStats } = useClients();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'active' | 'inactive'>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [deleteClientId, setDeleteClientId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const itemsPerPage = 5;
+  const itemsPerPage = 10;
 
-  // Load data
+  // Load data on mount
   useEffect(() => {
-    const loadClients = async () => {
-      try {
-        setError(false);
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 600));
-        setClients(mockClients);
-        setFilteredClients(mockClients);
-      } catch (err) {
-        console.error('Failed to fetch clients', err);
-        setError(true);
-      } finally {
-        setLoading(false);
-      }
-    };
+    fetch(currentPage, itemsPerPage, searchTerm);
+    fetchStats();
+  }, [currentPage, searchTerm]);
 
-    loadClients();
-  }, []);
-
-  // Filter and search
+  // Handle filter change
   useEffect(() => {
-    let result = clients;
-
-    // Search filter
-    if (searchTerm) {
-      result = result.filter(
-        (client) =>
-          client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          client.email.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+    if (filterType !== 'all') {
+      fetch(1, itemsPerPage, searchTerm);
+      setCurrentPage(1);
     }
-
-    // Status filter
-    if (filterType === 'active') {
-      result = result.filter((client) => client.total_invoices > 0);
-    } else if (filterType === 'inactive') {
-      result = result.filter((client) => client.total_invoices === 0);
-    }
-
-    setFilteredClients(result);
-    setCurrentPage(1);
-  }, [searchTerm, filterType, clients]);
-
-  // Pagination
-  const totalPages = Math.ceil(filteredClients.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedClients = filteredClients.slice(startIndex, startIndex + itemsPerPage);
+  }, [filterType]);
 
   // Export CSV
   const handleExportCSV = async () => {
@@ -177,18 +140,8 @@ export default function ClientsPage() {
 
     try {
       setIsDeleting(true);
-
-      // TODO: Appel API pour supprimer le client
-      // const response = await fetch(`/api/clients/${deleteClientId}`, {
-      //   method: 'DELETE',
-      //   headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
-      // });
-      // if (!response.ok) throw new Error('Échec de la suppression');
-
-      // Simulation: Supprimer localement
-      setClients((prev) => prev.filter((c) => c.id !== deleteClientId));
-      setFilteredClients((prev) => prev.filter((c) => c.id !== deleteClientId));
-
+      await deleteClient(deleteClientId);
+      await fetch(currentPage, itemsPerPage, searchTerm);
       addToast('Client supprimé avec succès', 'success');
       setDeleteClientId(null);
     } catch (err) {
@@ -201,6 +154,8 @@ export default function ClientsPage() {
       setIsDeleting(false);
     }
   };
+
+  const totalPages = data ? Math.ceil(data.total / itemsPerPage) : 1;
 
   if (loading) return <ClientsSkeleton />;
 
@@ -240,22 +195,24 @@ export default function ClientsPage() {
       </div>
 
       {/* KPI Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <KPICard
-          label="Total clients"
-          value={mockClientStats.total}
-          icon={Users}
-          accentColor="blue"
-        />
-        <KPICard
-          label="Montant total facturé"
-          value={`${mockClientStats.totalRevenue.toFixed(2)}€`}
-          icon={DollarSign}
-          accentColor="green"
-        />
-      </div>
+      {stats && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <KPICard
+            label="Total clients"
+            value={stats.total}
+            icon={Users}
+            accentColor="blue"
+          />
+          <KPICard
+            label="Montant total facturé"
+            value={`${stats.totalRevenue.toFixed(2)}€`}
+            icon={DollarSign}
+            accentColor="green"
+          />
+        </div>
+      )}
 
-      {clients.length === 0 ? (
+      {!data || data.clients.length === 0 ? (
         <EmptyState />
       ) : (
         <>
@@ -308,7 +265,7 @@ export default function ClientsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
-                {paginatedClients.map((client) => (
+                  {data?.clients.map((client) => (
                   <tr key={client.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                     <td className="px-6 py-4">
                       <div>
@@ -404,7 +361,7 @@ export default function ClientsPage() {
 
             {/* Results info */}
             <p className="mt-4 text-sm text-gray-600 dark:text-gray-400">
-              Affichage {startIndex + 1} à {Math.min(startIndex + itemsPerPage, filteredClients.length)} sur {filteredClients.length} clients
+              Affichage {((currentPage - 1) * itemsPerPage) + 1} à {Math.min(currentPage * itemsPerPage, data?.total || 0)} sur {data?.total || 0} clients
             </p>
           </>
       )}
@@ -421,7 +378,14 @@ export default function ClientsPage() {
         isProcessing={isDeleting}
       />
 
-      <ToastContainer toasts={toasts} onRemove={removeToast} />
+      {toasts.map((toast) => (
+        <Toast
+          key={toast.id}
+          message={toast.message}
+          type={toast.type}
+          onClose={() => removeToast(toast.id)}
+        />
+      ))}
     </div>
   );
 }
